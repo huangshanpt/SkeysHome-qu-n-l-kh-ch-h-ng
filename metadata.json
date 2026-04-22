@@ -1,0 +1,6 @@
+{
+  "name": "SmartCRM AI",
+  "description": "Hệ thống quản trị khách hàng thông minh với AI trích xuất dữ liệu, nhập liệu giọng nói và phân tích báo cáo chuyên sâu.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["AI Data Extraction", "Voice Input", "Multi-channel Marketing", "Advanced Analytics"]
+}

@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-heading: "Outfit", sans-serif;
+  
+  --color-primary: #0f172a;
+  --color-accent: #3b82f6;
+  --color-bg: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-text-main: #1e293b;
+  --color-text-muted: #64748b;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text-main font-sans;
+  }
+}
+
+.card {
+  @apply bg-white rounded-xl border border-border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)];
+}
+
+.ai-input-bar {
+  @apply bg-slate-100 border border-dashed border-accent rounded-lg p-3 flex items-center gap-3 mb-4;
+}
+
+.btn-action {
+  @apply px-4 py-2 border border-border bg-white rounded-md text-[13px] font-medium cursor-pointer transition-all hover:bg-slate-50;
+}
+
+.btn-primary {
+  @apply px-4 py-2 bg-accent text-white rounded-md text-[13px] font-medium cursor-pointer transition-all hover:opacity-90;
+}
+
+.badge {
+  @apply px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider;
+}
+
+.badge-vip { @apply bg-amber-100 text-amber-800; }
+.badge-new { @apply bg-emerald-100 text-emerald-800; }
+
+.sidebar-slim {
+  @apply w-[72px] bg-primary flex flex-col items-center py-6 gap-6;
+}
+
+.sidebar-icon-box {
+  @apply w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer transition-all text-slate-400 hover:text-white hover:bg-white/10;
+}
+
+.sidebar-icon-box.active {
+  @apply bg-accent text-white;
+}
