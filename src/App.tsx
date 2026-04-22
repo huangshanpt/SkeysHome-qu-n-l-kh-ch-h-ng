@@ -159,13 +159,74 @@ function Navbar() {
   );
 }
 
+import { auth } from './lib/firebase';
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+
+function Login({ onLogin }: { onLogin: () => void }) {
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      onLogin();
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-md w-full bg-white p-10 rounded-3xl shadow-xl shadow-slate-200 border border-slate-100 text-center space-y-8"
+      >
+        <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-indigo-100">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-900">Đăng nhập SmartCRM</h2>
+          <p className="text-slate-500 text-sm">Sử dụng Google để truy cập dữ liệu của bạn</p>
+        </div>
+        
+        <button 
+          onClick={handleGoogleLogin}
+          className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 hover:bg-slate-50 py-3.5 rounded-xl font-bold text-slate-700 transition-all shadow-sm"
+        >
+          <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
+          Tiếp tục với Google
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<AppMode | null>(crmService.getAppMode());
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleModeSelect = (selectedMode: AppMode) => {
     crmService.setAppMode(selectedMode);
     setMode(selectedMode);
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <Sparkles className="w-10 h-10 text-indigo-600 animate-pulse" />
+    </div>;
+  }
+
+  if (!user) {
+    return <Login onLogin={() => {}} />;
+  }
 
   if (!mode) {
     return <ModeSelection onSelect={handleModeSelect} />;

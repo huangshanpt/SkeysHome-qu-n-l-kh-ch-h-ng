@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { crmService } from '../services/crmService';
+import { auth } from '../lib/firebase';
 import { AppConfig } from '../types';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +45,11 @@ export default function Settings() {
     setTimeout(() => {
       setIsSaving(false);
     }, 1000);
+  };
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate('/');
   };
 
   const handleClearMode = () => {
@@ -99,13 +105,21 @@ export default function Settings() {
               </button>
             ))}
             
-            <div className="pt-4 mt-4 border-t border-border">
+            <div className="pt-4 mt-4 border-t border-border space-y-1">
               <button 
                 onClick={handleClearMode}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Đổi chế độ (Agency/Retail)</span>
+              </button>
+
+              <button 
+                onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Đổi chế độ (Agency/Retail)</span>
+                <span>Đăng xuất tài khoản</span>
               </button>
             </div>
           </div>

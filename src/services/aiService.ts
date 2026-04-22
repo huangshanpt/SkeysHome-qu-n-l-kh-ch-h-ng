@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIExtractionResult } from "../types";
 
+// Always initialize with the environment variable as per AI Studio guidelines
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export const aiService = {
@@ -29,7 +30,8 @@ export const aiService = {
     });
 
     try {
-      return JSON.parse(response.text || "{}");
+      const text = response.text;
+      return JSON.parse(text || "{}");
     } catch (e) {
       console.error("Failed to parse AI response", e);
       return {};
@@ -39,12 +41,10 @@ export const aiService = {
   async transcribeVoice(audioBase64: string): Promise<string> {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          { inlineData: { data: audioBase64, mimeType: "audio/webm" } },
-          { text: "Hãy chuyển văn bản từ giọng nói này sang tiếng Việt chính xác." }
-        ]
-      }
+      contents: [
+        { inlineData: { data: audioBase64, mimeType: "audio/webm" } },
+        { text: "Hãy chuyển văn bản từ giọng nói này sang tiếng Việt chính xác." }
+      ]
     });
     return response.text || "";
   },
@@ -68,7 +68,8 @@ export const aiService = {
       }
     });
     try {
-      return JSON.parse(response.text || "{}");
+      const resText = response.text;
+      return JSON.parse(resText || "{}");
     } catch (e) {
       return {};
     }

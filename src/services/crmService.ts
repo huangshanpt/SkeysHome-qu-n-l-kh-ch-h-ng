@@ -1,3 +1,16 @@
+import { 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  where, 
+  setDoc,
+  getDoc
+} from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+import { handleFirestoreError } from '../lib/errorHandlers';
 import { Customer, Purchase, Campaign, AppConfig, AppMode } from "../types";
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -5,32 +18,6 @@ const DEFAULT_CONFIG: AppConfig = {
   productCategories: ["Điện tử", "Gia dụng", "Phần mềm", "Dịch vụ"],
   enabledModules: ["Dashboard", "Customers", "Marketing", "Analytics"]
 };
-
-// Mock data updated with types
-const MOCK_CUSTOMERS: Customer[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn A",
-    email: "vana@gmail.com",
-    phone: "0987654321",
-    address: "Hà Nội",
-    group: "Thân thiết",
-    type: "retail",
-    createdAt: new Date().toISOString(),
-    notes: "Khách hàng VIP"
-  },
-  {
-    id: "2",
-    name: "Đại lý Hateco",
-    email: "contact@hateco.com",
-    phone: "0123456789",
-    address: "TP. HCM",
-    group: "Tiềm năng",
-    type: "agency",
-    createdAt: new Date().toISOString(),
-    notes: "Đối tác chiến lược"
-  }
-];
 
 export const crmService = {
   getAppMode(): AppMode | null {
@@ -47,54 +34,109 @@ export const crmService = {
   },
 
   async getConfig(): Promise<AppConfig> {
-    const stored = localStorage.getItem('crm_config');
-    return stored ? JSON.parse(stored) : DEFAULT_CONFIG;
+    try {
+      const user = auth.currentUser;
+      if (!user) return DEFAULT_CONFIG;
+      
+      const configDoc = await getDoc(doc(db, 'config', user.uid));
+      return configDoc.exists() ? configDoc.data() as AppConfig : DEFAULT_CONFIG;
+    } catch (error) {
+      console.warn("Failed to fetch config from Firestore, using default", error);
+      return DEFAULT_CONFIG;
+    }
   },
 
   async saveConfig(config: AppConfig): Promise<void> {
-    localStorage.setItem('crm_config', JSON.stringify(config));
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      await setDoc(doc(db, 'config', user.uid), config);
+    } catch (error) {
+      handleFirestoreError(error, 'write', 'config');
+    }
   },
 
   async getCustomers(mode?: AppMode): Promise<Customer[]> {
-    const stored = localStorage.getItem('crm_customers');
-    const all = stored ? JSON.parse(stored) : MOCK_CUSTOMERS;
-    const currentMode = mode || this.getAppMode();
-    return currentMode ? all.filter((c: Customer) => c.type === currentMode) : all;
+    try {
+      const currentMode = mode || this.getAppMode();
+      const user = auth.currentUser;
+      
+      let q = query(collection(db, 'customers'));
+      if (currentMode) {
+        q = query(collection(db, 'customers'), where('type', '==', currentMode));
+      }
+      
+      // If we want to restrict by ownerId (recommended)
+      if (user) {
+        q = query(q, where('ownerId', '==', user.uid));
+      }
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+    } catch (error) {
+      handleFirestoreError(error, 'list', 'customers');
+    }
   },
 
-  async saveCustomer(customer: Customer): Promise<void> {
-    const stored = localStorage.getItem('crm_customers');
-    const customers = stored ? JSON.parse(stored) : MOCK_CUSTOMERS;
-    const index = customers.findIndex((c: any) => c.id === customer.id);
-    if (index >= 0) {
-      customers[index] = customer;
-    } else {
-      customers.push(customer);
+  async saveCustomer(customer: any): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      const data = {
+        ...customer,
+        ownerId: user?.uid || 'guest',
+        updatedAt: new Date().toISOString()
+      };
+
+      if (customer.id && customer.id.length > 10) { // Simple check for auto-gen IDs vs mock IDs
+        await setDoc(doc(db, 'customers', customer.id), data);
+      } else {
+        const { id, ...rest } = data;
+        await addDoc(collection(db, 'customers'), rest);
+      }
+    } catch (error) {
+      handleFirestoreError(error, 'write', 'customers');
     }
-    localStorage.setItem('crm_customers', JSON.stringify(customers));
   },
 
   async getPurchases(customerId?: string): Promise<Purchase[]> {
-    const stored = localStorage.getItem('crm_purchases');
-    // Using a more realistic mock or empty
-    const all = stored ? JSON.parse(stored) : [];
-    return customerId ? all.filter((p: Purchase) => p.customerId === customerId) : all;
+    try {
+      let q = query(collection(db, 'purchases'));
+      if (customerId) {
+        q = query(q, where('customerId', '==', customerId));
+      }
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Purchase));
+    } catch (error) {
+      handleFirestoreError(error, 'list', 'purchases');
+    }
   },
 
-  async savePurchase(purchase: Purchase): Promise<void> {
-    const purchases = await this.getPurchases();
-    purchases.push(purchase);
-    localStorage.setItem('crm_purchases', JSON.stringify(purchases));
+  async savePurchase(purchase: any): Promise<void> {
+    try {
+      const { id, ...data } = purchase;
+      await addDoc(collection(db, 'purchases'), data);
+    } catch (error) {
+      handleFirestoreError(error, 'write', 'purchases');
+    }
   },
 
   async getCampaigns(): Promise<Campaign[]> {
-    const stored = localStorage.getItem('crm_campaigns');
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const snapshot = await getDocs(collection(db, 'campaigns'));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign));
+    } catch (error) {
+      handleFirestoreError(error, 'list', 'campaigns');
+    }
   },
 
-  async saveCampaign(campaign: Campaign): Promise<void> {
-    const campaigns = await this.getCampaigns();
-    campaigns.push(campaign);
-    localStorage.setItem('crm_campaigns', JSON.stringify(campaigns));
+  async saveCampaign(campaign: any): Promise<void> {
+    try {
+      const { id, ...data } = campaign;
+      await addDoc(collection(db, 'campaigns'), data);
+    } catch (error) {
+      handleFirestoreError(error, 'write', 'campaigns');
+    }
   }
 };
+

@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(ownerId) { return isSignedIn() && request.auth.uid == ownerId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Config: user-specific
+    match /config/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Shared system collection for connection testing
+    match /system/connection {
+      allow read: if true;
+    }
+
+    // Customers collection
+    match /customers/{customerId} {
+      allow read: if isSignedIn() && (resource == null || resource.data.ownerId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isOwner(existing().ownerId) && incoming().ownerId == request.auth.uid;
+      allow delete: if isOwner(existing().ownerId);
+    }
+
+    // Purchases sub-collection or root
+    match /purchases/{purchaseId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Immutable for now
+    }
+
+    // Campaigns collection
+    match /campaigns/{campaignId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}
